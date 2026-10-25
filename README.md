@@ -25,6 +25,19 @@ docker run --rm -p 8099:80 verschueren-ai:test
 curl -sS -o /dev/null -w '%{http_code}\n' http://127.0.0.1:8099/privacy   # 200
 ```
 
+## Status van de uitrol (2026-10-25)
+
+| Laag | Status |
+|---|---|
+| Repo + CI | ✅ `tvschuer/verschueren-ai` (private), workflow `build` groen, image in GHCR |
+| Portainer | ✅ stack **10** `verschueren-ai`, service `web`, container `verschueren-ai-web-1`, poort **8083** |
+| NPM | ✅ proxy host **12** `verschueren.ai` + `www.verschueren.ai` → `192.168.1.105:8083`, block_exploits aan, geen origin-cert (TLS eindigt bij Cloudflare) |
+| Cloudflare | ⛔ nog te doen: zone `verschueren.ai` + twee tunnel-public-hostnames |
+| Easyhost | ⛔ nog te doen: nameservers naar Cloudflare (na zone-export) |
+
+DNS-importbestand voor Cloudflare: `docs/dns-import-verschueren.ai.txt` (BIND-formaat; CNAME's na import op
+DNS-only zetten).
+
 ## Uitrollen (bestaand homelab-patroon)
 
 Repo → GHCR-image → Portainer-stack → NPM proxy host → Cloudflare Tunnel.
