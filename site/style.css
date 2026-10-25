@@ -1,0 +1,143 @@
+/* Verschueren.ai — minimale statische huisstijl.
+   Geen externe fonts, geen analytics, geen tracking: één request per pagina. */
+
+:root {
+  --bg: #0b0d10;
+  --surface: #14181d;
+  --border: #232a32;
+  --text: #e8edf2;
+  --muted: #9aa7b4;
+  --accent: #6ea8fe;
+  --accent-soft: rgba(110, 168, 254, .12);
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    --bg: #fbfcfd;
+    --surface: #ffffff;
+    --border: #e2e7ec;
+    --text: #11181f;
+    --muted: #5b6875;
+    --accent: #1a5fd0;
+    --accent-soft: rgba(26, 95, 208, .08);
+  }
+}
+
+* { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  padding: 0 1.25rem 4rem;
+  background: var(--bg);
+  color: var(--text);
+  font: 16px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, Helvetica, Arial, sans-serif;
+  text-rendering: optimizeLegibility;
+}
+
+header.site {
+  max-width: 46rem;
+  margin: 0 auto;
+  padding: 1.5rem 0 1rem;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  border-bottom: 1px solid var(--border);
+}
+
+.brand {
+  font-weight: 650;
+  letter-spacing: -.01em;
+  font-size: 1.0625rem;
+  color: var(--text);
+  text-decoration: none;
+}
+
+.brand span { color: var(--accent); }
+
+nav a {
+  color: var(--muted);
+  text-decoration: none;
+  font-size: .9375rem;
+  margin-left: 1.1rem;
+}
+
+nav a:hover, nav a[aria-current="page"] { color: var(--text); }
+
+main {
+  max-width: 46rem;
+  margin: 0 auto;
+  padding-top: 2.5rem;
+}
+
+h1 {
+  font-size: clamp(1.75rem, 4vw, 2.35rem);
+  line-height: 1.2;
+  letter-spacing: -.02em;
+  margin: 0 0 .75rem;
+  font-weight: 680;
+}
+
+h2 {
+  font-size: 1.125rem;
+  letter-spacing: -.01em;
+  margin: 2.25rem 0 .5rem;
+  font-weight: 640;
+}
+
+p, li { color: var(--text); }
+
+.lede {
+  font-size: 1.0625rem;
+  color: var(--muted);
+  margin: 0 0 2rem;
+  max-width: 38rem;
+}
+
+ul { padding-left: 1.15rem; }
+li { margin: .35rem 0; }
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1.15rem 1.25rem;
+  margin: 1.25rem 0;
+}
+
+.card h2 { margin-top: 0; }
+
+dl { margin: 0; }
+dt { font-weight: 600; margin-top: .9rem; }
+dt:first-child { margin-top: 0; }
+dd { margin: .15rem 0 0; color: var(--muted); }
+
+code {
+  font: .9em/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  background: var(--accent-soft);
+  border-radius: 4px;
+  padding: .1em .35em;
+}
+
+a { color: var(--accent); }
+
+footer {
+  max-width: 46rem;
+  margin: 3.5rem auto 0;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--border);
+  color: var(--muted);
+  font-size: .875rem;
+}
+
+footer a { color: var(--muted); text-decoration: none; }
+footer a:hover { color: var(--text); }
+
+.updated { color: var(--muted); font-size: .875rem; margin-top: -.4rem; }
+
+table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: .9375rem; }
+th, td { text-align: left; padding: .5rem .6rem; border-bottom: 1px solid var(--border); vertical-align: top; }
+th { color: var(--muted); font-weight: 600; }
