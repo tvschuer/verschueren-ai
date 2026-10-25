@@ -1,103 +1,97 @@
-# verschueren-ai
+# verschueren.ai
 
-Statische site voor `verschueren.ai` — huisbasis voor de privé-automatisering, en de twee documenten die
+Statische site voor `verschueren.ai` — de huisbasis van de privé-automatisering, en de twee documenten die
 Google OAuth in productiemodus verplicht stelt (homepage + privacybeleid).
 
-Geen build-stap, geen JS, geen analytics, geen externe requests. Drie HTML-bestanden, één CSS-bestand,
-nginx erbovenop.
+Geen build-stap, geen JS, geen analytics, geen externe requests. Drie pagina's, één CSS-bestand.
 
 ## Waarom dit bestaat
 
 De OAuth-app van de Gmail/Calendar/Drive-integratie staat in **Testing**, waardoor elke refresh token na
-7 dagen vervalt. Publiceren naar productie vereist een *App domain*: homepage-URL, privacybeleid-URL en
-geverifieerde authorised domains. Dit repo levert die URLs.
+zeven dagen vervalt. Publiceren naar productie vereist een *App domain*: homepage-URL, privacybeleid-URL en
+geverifieerde authorised domains. Deze repo levert die URL's.
 
-**Belangrijk:** upload géén logo in de Branding-pagina. Een logo maken van de app een geval voor
-brand verification; zonder logo (en met user type External + status In production) blijft de app
-functioneel voor eigen gebruik, met alleen de "unverified app"-waarschuwing en de 100-gebruikerscap —
-ruim voldoende voor twee eigen accounts.
+**Twee regels bij het publiceren:** upload géén logo (dat maakt er een brand-verification-case van) en zet
+`gmail.com` niet in de authorised domains (geen domein van jou). Met user type External + status
+*In production* blijft de app werken voor eigen gebruik, met alleen de "unverified app"-waarschuwing en de
+100-gebruikerscap — ruim voldoende voor twee eigen accounts.
 
-## Lokaal testen
+## Structuur
 
-```bash
-docker build -t verschueren-ai:test .
-docker run --rm -p 8099:80 verschueren-ai:test
-curl -sS -o /dev/null -w '%{http_code}\n' http://127.0.0.1:8099/privacy   # 200
+De repo-root **is** de site-root. Zo serveren GitHub Pages en de nginx-image exact dezelfde bestanden,
+zonder copieën of een build-stap.
+
+```
+index.html            /
+style.css             /style.css
+privacy/index.html    /privacy/  (en /privacy via 301)
+terms/index.html      /terms/
+CNAME                 custom domain voor GitHub Pages
+.nojekyll             geen Jekyll-verwerking
+Dockerfile            nginx-image voor de homelab-mirror
+nginx/default.conf    nette URL's + robots.txt
+docs/                 DNS-inventaris (alleen nodig bij een latere zone-verhuizing)
 ```
 
-## Status van de uitrol (2026-10-25)
+Alle interne links zijn **relatief**. Daardoor werkt dezelfde HTML op het domein, onder een
+project-pages-pad (`/verschueren-ai/`) én achter nginx.
 
-| Laag | Status |
+## Hosting: GitHub Pages (actief)
+
+Route gekozen omdat Easyhost geld vraagt voor een nameserver-wijziging; met Pages blijft de DNS — en dus de
+Proton-mail — volledig bij Easyhost staan.
+
+**DNS bij Easyhost (enkel deze records aanpassen/toevoegen):**
+
+| Type | Naam | Waarde |
+|---|---|---|
+| A | `@` | `185.199.108.153`, `185.199.109.153`, `185.199.110.153`, `185.199.111.153` |
+| AAAA (optioneel) | `@` | `2606:50c0:8000::153`, `2606:50c0:8001::153`, `2606:50c0:8002::153`, `2606:50c0:8003::153` |
+| CNAME | `www` | `tvschuer.github.io` |
+
+De bestaande park-A `217.21.190.175` moet **verdwijnen** (die vier A-records vervangen hem).
+MX, SPF, Proton-verificatie, DMARC, de drie DKIM-CNAME's en `autodiscover` blijven **ongewijzigd** — dat is
+het hele punt van deze route.
+
+Certificaat: GitHub vraagt automatisch een Let's Encrypt-cert aan zodra de DNS-check slaagt. Daarna
+**Enforce HTTPS** aanzetten in *Settings → Pages*.
+
+## Lokale mirror (homelab, slapend)
+
+Dezelfde inhoud draait ook als container in het homelab, klaar om over te schakelen als je ooit de zone naar
+Cloudflare verhuist:
+
+| Laag | Waarde |
 |---|---|
-| Repo + CI | ✅ `tvschuer/verschueren-ai` (private), workflow `build` groen, image in GHCR |
-| Portainer | ✅ stack **10** `verschueren-ai`, service `web`, container `verschueren-ai-web-1`, poort **8083** |
-| NPM | ✅ proxy host **12** `verschueren.ai` + `www.verschueren.ai` → `192.168.1.105:8083`, block_exploits aan, geen origin-cert (TLS eindigt bij Cloudflare) |
-| Cloudflare | ⛔ nog te doen: zone `verschueren.ai` + twee tunnel-public-hostnames |
-| Easyhost | ⛔ nog te doen: nameservers naar Cloudflare (na zone-export) |
+| Image | `ghcr.io/tvschuer/verschueren-ai:latest` (CI bouwt op elke push naar `main`) |
+| Portainer | stack **10** `verschueren-ai`, service `web`, poort **8083** |
+| NPM | proxy host **12** `verschueren.ai` + `www.verschueren.ai` → `192.168.1.105:8083` |
 
-DNS-importbestand voor Cloudflare: `docs/dns-import-verschueren.ai.txt` (BIND-formaat; CNAME's na import op
-DNS-only zetten).
+Verifieer zonder DNS met een Host-header:
 
-## Uitrollen (bestaand homelab-patroon)
+```bash
+curl -sS -o /dev/null -w '%{http_code}\n' -H 'Host: verschueren.ai' http://192.168.1.106/privacy
+docker build -t verschueren-ai:test . && docker run --rm -p 8099:80 verschueren-ai:test
+```
 
-Repo → GHCR-image → Portainer-stack → NPM proxy host → Cloudflare Tunnel.
+## Later: zone naar Cloudflare
 
-1. Private repo `tvschuer/verschueren-ai`; push naar `main` → `.github/workflows/build.yml` bouwt
-   `ghcr.io/tvschuer/verschueren-ai:latest`.
-2. Portainer (192.168.1.105): stack uit `docker-compose.yml`, poort **8083** (8081/8082 zijn bezet).
-3. NPM (192.168.1.106:81): proxy host `verschueren.ai` → `192.168.1.105:8083`, block_exploits aan,
-   Let's Encrypt-certificaat aanvragen.
-4. Cloudflare Tunnel (`e3f28e2f-4c48-4ede-b639-ed4500e2dd29`): public hostname `verschueren.ai` →
-   `http://192.168.1.106:80`. Idem `www` (of een redirect-regel).
-
-## DNS: verschueren.ai staat nu bij Easyhost, niet bij Cloudflare
-
-`NS = ns1/ns2/ns3.easyhost.be`, apex `A = 217.21.190.175` (Combell/Easyhost-parkpagina, nginx, **geen
-TLS op 443**). De tunnelroute werkt alleen als de zone in Cloudflare staat — dus de zone moet verhuizen.
-Dat raakt de **mail** (Proton), dus dit is de enige stap met echt risico.
-
-### Records die vandaag live staan (geïnventariseerd 2026-10-25)
-
-| Type | Naam | Waarde | Bijzonderheid |
-|---|---|---|---|
-| MX 10 | @ | `mail.protonmail.ch` | |
-| MX 20 | @ | `mailsec.protonmail.ch` | |
-| MX 50 | @ | `mx.backup.mailprotect.be` | backup-MX Easyhost |
-| TXT | @ | `v=spf1 include:_spf.protonmail.ch ~all` | |
-| TXT | @ | `protonmail-verification=276b07ad31945275056f0ac0a353d413d7f48962` | niet weglaten, breekt Proton-domeinverificatie |
-| TXT | `_dmarc` | `v=DMARC1; p=quarantine` | |
-| CNAME | `protonmail._domainkey` | `protonmail.domainkey.d2lhzudw4yhe5thoreclhstwfafboqwlfqiqd3z73u32spqg6fssq.domains.proton.ch` | DKIM |
-| CNAME | `protonmail2._domainkey` | `protonmail2.domainkey.…domains.proton.ch` | DKIM |
-| CNAME | `protonmail3._domainkey` | `protonmail3.domainkey.…domains.proton.ch` | DKIM |
-| CNAME | `autodiscover` | `autodiscover.mailprotect.be` | Outlook-autoconfig |
-| A | @ en `www` | `217.21.190.175` | wordt vervangen door de tunnel |
-
-Er is **geen** wildcard en **geen** CAA-record.
-
-### Volgorde (niet omdraaien)
-
-1. Exporteer de zone in het Easyhost-paneel (backup vóór alles).
-2. Zone toevoegen in Cloudflare (Full setup), records hierboven **één op één** overnemen.
-   Mail-records (MX, de drie DKIM-CNAME's, autodiscover) op **DNS-only** (grijze wolk) — proxying breekt
-   mailverkeer en DKIM-validatie.
-3. `dig`-vergelijking oud vs nieuw zolang de NS nog bij Easyhost staan (vergelijk via
-   `dig @ns1.easyhost.be` en `dig @<nieuwe CF-nameserver>`).
-4. Pas dan de nameservers bij Easyhost aan naar de twee CF-nameservers.
-5. Na propagatie: MX + SPF + DKIM + DMARC opnieuw valideren (testmail naar Gmail/Outlook, headers
-   controleren op `spf=pass` en `dkim=pass`), en de A-records naar de tunnel zetten.
-6. Search Console: `verschueren.ai` verifiëren (DNS-TXT via Cloudflare) — nodig om het domein als
-   *authorised domain* in de OAuth-branding te kunnen gebruiken.
+Alleen nodig als je de site naar de tunnel wil verhuizen. `docs/dns-import-verschueren.ai.txt` bevat de
+volledige live-inventaris van 2026-10-25 in BIND-formaat. Volgorde: zone-export maken → records overnemen
+(mail-records op **DNS-only**) → `dig`-vergelijking → dán de nameservers omzetten → mailvalidatie
+(`spf=pass`, `dkim=pass`) → A-records naar de tunnel.
 
 ## Google Cloud Branding-velden
 
 | Veld | Waarde |
 |---|---|
-| App name | `Verschueren AI` (geen Google-merknamen, geen logo) |
+| App name | `Verschueren AI` (geen logo) |
 | User support email | `tvschuer@gmail.com` |
 | Application home page | `https://verschueren.ai` |
-| Application privacy policy link | `https://verschueren.ai/privacy` |
-| Application terms of service link | `https://verschueren.ai/terms` |
-| Authorised domains | `verschueren.ai` (en `quadreg.be` alleen als daar echt een URL staat) |
+| Application privacy policy link | `https://verschueren.ai/privacy/` |
+| Application terms of service link | `https://verschueren.ai/terms/` |
+| Authorised domains | `verschueren.ai` |
 | Developer contact | `tom@quadreg.be` |
 
-`gmail.com` hoort **niet** in de authorised domains: dat is geen domein van jou en Google wijst het af.
+Gebruik de URL's **met** trailing slash: dat is de canonieke vorm die Pages serveert, zonder omweg via een
+redirect.
